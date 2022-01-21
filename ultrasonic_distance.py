@@ -1,6 +1,9 @@
 #Libraries
 import RPi.GPIO as GPIO
 import time
+import sys
+import mido
+
  
 #GPIO Mode (BOARD / BCM)
 GPIO.setmode(GPIO.BCM)
@@ -41,13 +44,30 @@ def distance():
     return distance
  
 if __name__ == '__main__':
+
+    for port in mido.get_output_names():
+        if port[:9]=="UNO Synth":
+            outport = mido.open_output(port)
+            print("Using Output:", port)
+            break
+
+
+    if outport == None:
+        sys.exit("Unable to find UNO Synth")
+
     try:
         while True:
-            dist = distance()
+            dist = distance()-2
             print ("Measured Distance = %.1f cm" % dist)
+            if dist < 50:
+                msg = mido.Message("control_change", channel=0, control=17, value=int(127/50*dist))
+                print(msg)
+                outport.send(msg)
+
             time.sleep(0.1)
  
         # Reset by pressing CTRL + C
     except KeyboardInterrupt:
         print("Measurement stopped by User")
         GPIO.cleanup()
+
